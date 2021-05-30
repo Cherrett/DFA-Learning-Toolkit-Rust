@@ -1,7 +1,7 @@
-extern crate dfa_toolkit;
+extern crate dfa_learning_toolkit;
 
-use dfa_toolkit::dfa_learning_toolkit::dfa::dfa_from_json;
-use dfa_toolkit::dfa_learning_toolkit::rpni::rpni;
+use dfa_learning_toolkit::dfa_learning_toolkit::dfa::dfa_from_json;
+use dfa_learning_toolkit::dfa_learning_toolkit::rpni::rpni;
 
 fn main() {
     let apta = dfa_from_json(String::from("TestingAPTAs/32.json"));
