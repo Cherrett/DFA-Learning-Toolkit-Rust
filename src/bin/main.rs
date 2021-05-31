@@ -1,10 +1,10 @@
 extern crate dfa_learning_toolkit;
 
-use dfa_learning_toolkit::dfa_learning_toolkit::dfa::dfa_from_json;
+use dfa_learning_toolkit::dfa_learning_toolkit::dfa::{dfa_from_go_json};
 use dfa_learning_toolkit::dfa_learning_toolkit::rpni::rpni;
 
 fn main() {
-    let apta = dfa_from_json(String::from("TestingAPTAs/32.json"));
+    let apta = dfa_from_go_json(String::from("TestingAPTAs/32.json"));
     let (dfa, merge_data) = rpni(apta);
 
     print!("Number of States: {}\n", dfa.states.len());
