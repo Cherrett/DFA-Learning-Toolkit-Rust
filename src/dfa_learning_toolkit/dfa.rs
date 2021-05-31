@@ -2,6 +2,8 @@ use serde::Deserialize;
 use std::fs;
 use crate::dfa_learning_toolkit::dfa_state::{State, ACCEPTING, REJECTING, StateLabel};
 use std::collections::{HashSet};
+use std::io::Read;
+use std::fs::File;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -126,6 +128,26 @@ impl DFA {
             panic!("Unreachable State exist within DFA.")
         }
     }
+
+    /// is_valid_safe checks whether DFA is valid.
+    /// Returns false if not valid.
+    pub fn is_valid_safe(&self) -> bool{
+        if self.states.len() < 1 {
+            // Return false if number of states is invalid.
+            return false
+        }else if self.starting_state_id < 0 || self.starting_state_id >= self.states.len() as i32 {
+            // Return false if starting state is invalid.
+            return false
+        }else if self.alphabet.len() < 1 {
+            // Return false if number of symbols is invalid.
+            return false
+        }else if self.unreachable_states().len() > 0 {
+            // Return false if any unreachable states exist within DFA.
+            return false
+        }
+
+        return true
+    }
 }
 
 /// new_dfa initializes a new empty DFA.
@@ -139,8 +161,32 @@ pub fn new_dfa() -> DFA {
 
 /// dfa_from_json returns a DFA read from a JSON file given a file path.
 pub fn dfa_from_json(file_path: String) -> DFA {
+    // Read from file.
     let file = fs::File::open(file_path).expect("file should open read only");
+
+    // Convert JSON to DFA.
     let dfa: DFA = serde_json::from_reader(file).expect("error while reading or parsing");
 
+    // Return read DFA.
+    return dfa;
+}
+
+/// dfa_from_go_json returns a DFA read from a JSON file exported from the GO toolkit given a file path.
+pub fn dfa_from_go_json(file_path: String) -> DFA {
+    // Read from file.
+    let mut file = File::open(&file_path).expect("file should open read only");
+    // Store file content in string.
+    let mut data = String::new();
+    file.read_to_string(&mut data).expect("error while reading to string");
+    // Close file.
+    drop(file);
+
+    // Replace StartingStateID with StartingStateId.
+    let new_data = data.replace("StartingStateID", "StartingStateId");
+
+    // Read DFA from changed JSON in new_data string.
+    let dfa: DFA = serde_json::from_str(&*new_data).expect("error while reading or parsing");
+
+    // Return read DFA.
     return dfa;
 }
