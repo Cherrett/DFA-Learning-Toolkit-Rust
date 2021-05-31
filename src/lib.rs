@@ -12,7 +12,7 @@ mod tests {
         // Iterate over 3 different sizes of target DFA.
         for i in 0..apta_names.len(){
             // Read DFA/APTA from JSON.
-            let apta = dfa_from_go_json(String::from(format!("TestingAPTAs/{0}.json", apta_names[i])));
+            let apta = dfa_from_go_json(String::from(format!("datasets/TestingAPTAs/{0}.json", apta_names[i])));
 
             assert!(apta.is_valid_safe());
             assert_eq!(apta.alphabet.len(), 2);

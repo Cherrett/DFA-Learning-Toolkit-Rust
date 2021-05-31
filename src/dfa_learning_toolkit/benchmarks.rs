@@ -1,8 +1,13 @@
 use std::time::Instant;
 use crate::dfa_learning_toolkit::dfa;
+use crate::dfa_learning_toolkit::util::new_stats_tracker;
+use crate::dfa_learning_toolkit::edsm::exhaustive_edsm;
+use std::io::Write;
+use tabwriter::TabWriter;
+use crate::dfa_learning_toolkit::rpni::rpni;
 
-pub fn det_merge_benchmark() {
-    println!("Normal State Partition");
+/// merge_states_benchmark benchmarks the performance of the merge_states() function.
+pub fn merge_states_benchmark() {
     // These are target dfa sizes we will test.
     let dfa_sizes = [16, 32, 64];
     // These are the training set sizes we will test.
@@ -23,8 +28,8 @@ pub fn det_merge_benchmark() {
         println!("-------------------------------------------------------------");
         println!("-------------------------------------------------------------");
 
-        // Create APTA.
-        let apta = dfa::dfa_from_json(format!("TestingAPTAs/{}.json", target_size));
+        // Read APTA.
+        let apta = dfa::dfa_from_go_json(format!("datasets/TestingAPTAs/{}.json", target_size));
 
         println!("APTA size: {}", apta.states.len());
 
@@ -52,4 +57,90 @@ pub fn det_merge_benchmark() {
         println!("Time: {:.2}s", total_time);
         println!("Merges per second: {:.2}\n", total_merges as f64 / total_time);
     }
+}
+
+/// exhaustive_edsm_benchmark benchmarks the performance of the exhaustive_edsm() function.
+pub fn exhaustive_edsm_benchmark() {
+    // Number of iterations.
+    let n = 128;
+    // Target size.
+    let target_size = 32;
+
+    let mut number_of_states = new_stats_tracker();
+    let mut durations = new_stats_tracker();
+    let mut merges_per_sec = new_stats_tracker();
+    let mut merges = new_stats_tracker();
+    let mut valid_merges = new_stats_tracker();
+
+    for i in 0..n {
+        println!("BENCHMARK {}/{}", i + 1, n);
+
+        // Read APTA from file.
+        let apta = dfa::dfa_from_go_json(format!("datasets/Generated Abbadingo/{}/{}.json", target_size, i));
+
+        let (resultant_dfa, merge_data) = exhaustive_edsm(apta);
+
+        number_of_states.add_int(resultant_dfa.states.len() as i64);
+        durations.add(merge_data.duration.as_secs_f64());
+        merges_per_sec.add(merge_data.attempted_merges_per_sec());
+        merges.add_int(merge_data.attempted_merges_count as i64);
+        valid_merges.add_int(merge_data.valid_merges_count as i64);
+    }
+
+    let mut tw = TabWriter::new(vec![]);
+    write!(&mut tw, "\t{}\t{}\t{}\t{}\t\n", "Minimum", "Maximum", "Average", "Standard Dev").unwrap();
+    write!(&mut tw, "\t{}\t{}\t{}\t{}\t\n", "------------", "------------", "------------", "------------").unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Number of States", number_of_states.min(), number_of_states.max(), number_of_states.mean(), number_of_states.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{:.2}\t{:.2}\t{:.2}\t{:.2}\t\n", "Duration", durations.min(), durations.max(), durations.mean(), durations.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Merges/s", f64::round(merges_per_sec.min()) as i64, f64::round(merges_per_sec.max()) as i64, f64::round(merges_per_sec.mean()) as i64, f64::round(merges_per_sec.population_standard_dev()) as i64).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Attempted Merges", merges.min(), merges.max(), merges.mean(), merges.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Valid Merges", valid_merges.min(), valid_merges.max(), valid_merges.mean(), valid_merges.population_standard_dev()).unwrap();
+    tw.flush().unwrap();
+
+    println!("--------------------------------------------------------------------------------------------");
+    print!("{}", String::from_utf8(tw.into_inner().unwrap()).unwrap());
+    println!("--------------------------------------------------------------------------------------------");
+}
+
+/// rpni_benchmark benchmarks the performance of the rpni() function.
+pub fn rpni_benchmark() {
+    // Number of iterations.
+    let n = 128;
+    // Target size.
+    let target_size = 32;
+
+    let mut number_of_states = new_stats_tracker();
+    let mut durations = new_stats_tracker();
+    let mut merges_per_sec = new_stats_tracker();
+    let mut merges = new_stats_tracker();
+    let mut valid_merges = new_stats_tracker();
+
+    for i in 0..n {
+        println!("BENCHMARK {}/{}", i + 1, n);
+
+        // Read APTA from file.
+        let apta = dfa::dfa_from_go_json(format!("datasets/Generated Abbadingo/{}/{}.json", target_size, i));
+
+        let (resultant_dfa, merge_data) = rpni(apta);
+
+        number_of_states.add_int(resultant_dfa.states.len() as i64);
+        durations.add(merge_data.duration.as_secs_f64());
+        merges_per_sec.add(merge_data.attempted_merges_per_sec());
+        merges.add_int(merge_data.attempted_merges_count as i64);
+        valid_merges.add_int(merge_data.valid_merges_count as i64);
+    }
+
+    let mut tw = TabWriter::new(vec![]);
+    write!(&mut tw, "\t{}\t{}\t{}\t{}\t\n", "Minimum", "Maximum", "Average", "Standard Dev").unwrap();
+    write!(&mut tw, "\t{}\t{}\t{}\t{}\t\n", "------------", "------------", "------------", "------------").unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Number of States", number_of_states.min(), number_of_states.max(), number_of_states.mean(), number_of_states.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{:.2}\t{:.2}\t{:.2}\t{:.2}\t\n", "Duration", durations.min(), durations.max(), durations.mean(), durations.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Merges/s", f64::round(merges_per_sec.min()) as i64, f64::round(merges_per_sec.max()) as i64, f64::round(merges_per_sec.mean()) as i64, f64::round(merges_per_sec.population_standard_dev()) as i64).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Attempted Merges", merges.min(), merges.max(), merges.mean(), merges.population_standard_dev()).unwrap();
+    write!(&mut tw, "{}\t{}\t{}\t{}\t{}\t\n", "Valid Merges", valid_merges.min(), valid_merges.max(), valid_merges.mean(), valid_merges.population_standard_dev()).unwrap();
+    tw.flush().unwrap();
+
+    println!("--------------------------------------------------------------------------------------------");
+    print!("{}", String::from_utf8(tw.into_inner().unwrap()).unwrap());
+    println!("--------------------------------------------------------------------------------------------");
 }
